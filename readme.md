@@ -18,7 +18,7 @@ deactivate
 ```
 
 
-2. Установка библиотек
+2. Установка библиотек (это несколько минут)
 ```bash
 pip3 install -r requirements.txt
 ```
@@ -28,3 +28,10 @@ pip3 install -r requirements.txt
 ```bash
 git clone https://github.com/elyha7/yoloface
 ```
+
+Убрать предупреждения о ресайзе изображения
+yoloface/utils/general.py строка 93
+
+
+
+При первом запуске скачаются веса нейронки для детекции (111 Мб)
