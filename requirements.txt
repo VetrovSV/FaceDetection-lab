@@ -27,4 +27,5 @@ wandb
 facenet-pytorch
 
 # либа для работы с видеофайлами
+imageio
 imageio-ffmpeg

@@ -12,7 +12,7 @@ from face_detector import YoloDetector		# из папки yoloface
 from facenet_pytorch import MTCNN, InceptionResnetV1
 
 
-
+# FIX: тут нужны ещё проверки, т.к. не всякие лица корректно обрабатываются (см. тест с видео)
 def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, device:str = 'cpu'):
     """распознаёт лица людей на RGB картинке img в прямоугольниках face_boxes"""
     face_embs = []

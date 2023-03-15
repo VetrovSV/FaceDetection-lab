@@ -35,3 +35,9 @@ yoloface/utils/general.py строка 93
 
 
 При первом запуске скачаются веса нейронки для детекции (111 Мб)
+
+
+Видео для теста:
+```bash
+wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
+```
