@@ -25,3 +25,6 @@ wandb
 
 # для распознования лиц
 facenet-pytorch
+
+# либа для работы с видеофайлами
+imageio-ffmpeg
