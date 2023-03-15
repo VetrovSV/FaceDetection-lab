@@ -49,7 +49,7 @@ def TEST_VIDEO():
         if bboxes[0]:
             # FIX: не на всех кадрых нормально лица обрабатываются
             try:
-                faces = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], frame)
+                faces = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], frame, DEVICE)
             except AttributeError as e:
                 print(f"Error. frame{i}", end = "; ")
                 print(bboxes[0])
