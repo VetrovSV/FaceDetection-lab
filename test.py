@@ -13,8 +13,9 @@ import torch
 import imageio          # читает видео
 
 
-def TEST_IMAGE(filename:str):
-    """проверка на картинке с одним лицом"""
+def TEST_IMAGE(filename:str, persons:int = None):
+    """проверка на картинке filename с одним лицом; 
+    проверяет утверждение сравнивая persons (ожидаемое число лиц на картинке) с фактическим"""
     global model_face_detect, mtcnn, model_face_recog, DEVICE
     orgimg = np.array( Image.open( filename ) )
     t0 = time.time()
@@ -23,19 +24,22 @@ def TEST_IMAGE(filename:str):
     t1 = time.time()
     print(filename)
     print(f"frames: {1}; size {orgimg.shape[0]:4d}x{orgimg.shape[1]:4d}; face embeddings: {len(embs)}; time {t1-t0:6.3f} sec")
+    if persons is not None:
+        assert len(embs) == persons
 
 
 def TEST_IMAGES():
-    # тест на картинках
+    """тест распознования на картинках; 
+    перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
     jpgFilenamesList = glob.glob('test-images/*.jpg')
     for file in jpgFilenamesList:
-        TEST_IMAGE(file)
+        persons = int(file[-5:-4])
+        TEST_IMAGE(file, persons)
     print("[OK] TEST_IMAGES\n")
 
 
-# FIX: тут где-то косяк в коде
 def TEST_VIDEO(filename:str):
-    # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
+    """прогоняет видео, распознаёт лица, не проверяет утверждения"""
     vid = imageio.get_reader(filename,  'ffmpeg')
     print(f"file: {filename};  size: {vid.get_meta_data(1)['size']}; duration {vid.get_meta_data(1)['duration']}; fps {vid.get_meta_data(1)['fps']}")
     Faces = []
@@ -67,6 +71,35 @@ def TEST_VIDEO(filename:str):
 
 
 
+def TEST_UNIQUE_FACES_COUNT(filename:str, uniq_persons:int = None):
+    """Проверяет количество различных"""
+    global model_face_detect, mtcnn, model_face_recog, DEVICE
+    orgimg = np.array( Image.open( filename ) )
+    t0 = time.time()
+    bboxes,points = model_face_detect.predict(orgimg)
+    embs = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], orgimg, DEVICE)
+    t1 = time.time()
+    print(filename)
+    print(f"frames: {1}; size {orgimg.shape[0]:4d}x{orgimg.shape[1]:4d}; face embeddings: {len(embs)}; time {t1-t0:6.3f} sec")
+
+    # поиск уникальных лиц
+    known_faces = []
+    known_faces = main_lib.filter_new_faces(embs, known_faces)
+    if uniq_persons is not None:
+        assert len(known_faces) == uniq_persons
+
+
+def TEST_UNIQUE_FACES_COUNT_ALL():
+    """тест распознования на картинках; 
+    перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
+    TEST_UNIQUE_FACES_COUNT('test-images/peoples-side-5.jpg', 5)
+    TEST_UNIQUE_FACES_COUNT('test-images/peoples-front-5.jpg', 5)
+    TEST_UNIQUE_FACES_COUNT('test-images/peoples-1.jpg', 1)
+    print("[OK] TEST_UNIQUE_FACES_COUNT_ALL\n")
+
+
+
+
 # DEVICE = 'cuda:0'
 DEVICE = 'cpu'
 print(f"Device: {DEVICE}")
@@ -84,6 +117,7 @@ if DEVICE != 'cpu':
 model_face_detect, mtcnn, model_face_recog = main_lib.init_models(DEVICE)
 
 TEST_IMAGES()
+TEST_UNIQUE_FACES_COUNT_ALL()
 
 # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
 # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking-and-pause.mp4

@@ -12,10 +12,10 @@ from face_detector import YoloDetector		# из папки yoloface
 from facenet_pytorch import MTCNN, InceptionResnetV1
 
 
-MIN_SIZE = 30		# минимальная ширина и высота прямоугольника с лицом
+MIN_SIZE = 30			# минимальная ширина и высота прямоугольника с лицом
+THRESHOLD_EUC = 0.5 	# первое приближение для порога различий представлений лиц (евклидова расстояние) получено их тестовых картинок
 
 
-# FIX: тут нужны ещё проверки, т.к. не всякие лица корректно обрабатываются (см. тест с видео)
 def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, device:str = 'cpu', debug = False):
     """распознаёт лица людей на RGB картинке img в прямоугольниках face_boxes;
     если debug = True, то будет сохрянять плохик картинки"""
@@ -39,6 +39,7 @@ def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, devi
     return face_embs
 
 
+
 def init_models(device:str = 'cpu'):
 	"""инициализирует три модели: деткции, предобработки лиц, распознования; 
 	скачивает веса (111 мб, если не скачены) нейроки для распознования"""
@@ -48,3 +49,29 @@ def init_models(device:str = 'cpu'):
 	mtcnn = MTCNN(device=device)             # предобработка картинки
 	model_face_recog = InceptionResnetV1(pretrained='casia-webface', device=device).eval()        # 111 Мб
 	return model_face_detect, mtcnn, model_face_recog
+
+
+
+# первое приближение для порога различий получено их тестовых картинок
+def filter_new_faces(faces:list, known_faces:list, threshold = THRESHOLD_EUC):
+	"""выдаёт те представления лиц из faces, что не похожи на known_faces"""
+	uniq_faces = []
+	start = 0
+	if len(known_faces) == 0:
+		known_faces += [faces[0]]
+		start = 1
+
+	for face in faces[start:]:
+		dists = calc_distances(face, known_faces)
+		if torch.min( dists ) >= threshold:			# лицо не похоже на остальные
+			known_faces += [ face ]
+	return known_faces
+
+
+def calc_distances(face:torch.Tensor, faces:list[torch.Tensor]):
+	"""возвращает расстояние от представления лица face до всех остальных """
+	distances = torch.zeros( len(faces) )
+	for i,f in enumerate(faces):
+		distances[i] = ((f - face)**2).sum()
+
+	return distances
