@@ -38,28 +38,30 @@ def TEST_VIDEO():
     # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
     vid = imageio.get_reader('test-images/face-demographics-walking.mp4',  'ffmpeg')
     print(vid.get_meta_data(1))
-    faces = []
+    Faces = []
 
     t0 = time.time()
-    i = 0
-    for frame in vid:
+    fps = vid.get_meta_data(1)['fps']
+    duration = vid.get_meta_data(1)['duration']
+    vid_len = int(fps * duration)
+
+    print(f"vid len {vid_len} frames")
+    for i,frame in enumerate(vid):
         bboxes,points = model_face_detect.predict(frame)
         
         # если найдены лица
         if bboxes[0]:
-            # FIX: не на всех кадрых нормально лица обрабатываются
-            try:
-                faces = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], frame, DEVICE)
-            except AttributeError as e:
-                print(f"Error. frame{i}", end = "; ")
-                print(bboxes[0])
-            faces += faces
-        i = i + 1
+            # FIX: не на всех кадрах нормально лица обрабатываются
+            faces = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], frame, DEVICE)
+            Faces += faces
+        # print(i)
+        if ( i % (vid_len//10) == 0): print("|",end="", flush=True)
         # print(f"frame: {i:4d}; faces detected: {len(bboxes[0])}")
 
     t1 = time.time()
 
-    print(f"frames: {i}; time {t1-t0:.3f} sec; face embeddings: {len(faces)}")
+    print()
+    print(f"frames: {i}; time {t1-t0:.3f} sec; fps {i/(t1-t0):4.2f} face embeddings: {len(Faces)}")
 
     print("[OK] TEST_VIDEO\n")
 
@@ -81,6 +83,6 @@ if DEVICE != 'cpu':
 # инициализация моделей
 model_face_detect, mtcnn, model_face_recog = main_lib.init_models(DEVICE)
 
-TEST_IMAGES()
+# TEST_IMAGES()
 
 TEST_VIDEO()    # fix: тут где-то косяк в коде
