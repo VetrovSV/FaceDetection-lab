@@ -13,7 +13,7 @@ import torch
 import imageio          # читает видео
 
 
-def TEST_IMAGE(filename):
+def TEST_IMAGE(filename:str):
     """проверка на картинке с одним лицом"""
     global model_face_detect, mtcnn, model_face_recog, DEVICE
     orgimg = np.array( Image.open( filename ) )
@@ -34,10 +34,10 @@ def TEST_IMAGES():
 
 
 # FIX: тут где-то косяк в коде
-def TEST_VIDEO():
+def TEST_VIDEO(filename:str):
     # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
-    vid = imageio.get_reader('test-images/face-demographics-walking.mp4',  'ffmpeg')
-    print(vid.get_meta_data(1))
+    vid = imageio.get_reader(filename,  'ffmpeg')
+    print(f"file: {filename};  size: {vid.get_meta_data(1)['size']}; duration {vid.get_meta_data(1)['duration']}; fps {vid.get_meta_data(1)['fps']}")
     Faces = []
 
     t0 = time.time()
@@ -83,6 +83,9 @@ if DEVICE != 'cpu':
 # инициализация моделей
 model_face_detect, mtcnn, model_face_recog = main_lib.init_models(DEVICE)
 
-# TEST_IMAGES()
+TEST_IMAGES()
 
-TEST_VIDEO()    # fix: тут где-то косяк в коде
+# wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
+# wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking-and-pause.mp4
+TEST_VIDEO('test-images/face-demographics-walking-and-pause.mp4')
+TEST_VIDEO('test-images/face-demographics-walking.mp4')
