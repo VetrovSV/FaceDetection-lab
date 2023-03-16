@@ -13,7 +13,10 @@ from facenet_pytorch import MTCNN, InceptionResnetV1
 
 
 MIN_SIZE = 30			# минимальная ширина и высота прямоугольника с лицом
-THRESHOLD_EUC = 0.5 	# первое приближение для порога различий представлений лиц (евклидова расстояние) получено их тестовых картинок
+# первое приближение для порога различий представлений лиц (евклидова расстояние) получено их тестовых картинок
+# THRESHOLD_EUC = 0.5
+# По видео понятно, что нужно больше
+THRESHOLD_EUC = 0.75
 
 
 def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, device:str = 'cpu', debug = False):
@@ -55,7 +58,6 @@ def init_models(device:str = 'cpu'):
 # первое приближение для порога различий получено их тестовых картинок
 def filter_new_faces(faces:list, known_faces:list, threshold = THRESHOLD_EUC):
 	"""выдаёт те представления лиц из faces, что не похожи на known_faces"""
-	uniq_faces = []
 	start = 0
 	if len(known_faces) == 0:
 		known_faces += [faces[0]]
