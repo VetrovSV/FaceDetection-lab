@@ -12,11 +12,15 @@ from face_detector import YoloDetector		# из папки yoloface
 from facenet_pytorch import MTCNN, InceptionResnetV1
 
 
-MIN_SIZE = 30			# минимальная ширина и высота прямоугольника с лицом
-# первое приближение для порога различий представлений лиц (евклидова расстояние) получено их тестовых картинок
-# THRESHOLD_EUC = 0.5
-# По видео понятно, что нужно больше
-THRESHOLD_EUC = 0.75
+# минимальная ширина и высота прямоугольника с лицом; с этим парамаетром можно поэкперементировать
+# MIN_FACE_SIZE = 30	# для детекции - ОК, но слишком маленький размер для распознования
+MIN_FACE_SIZE = 45		
+
+
+# (первое приближение) евклидово расстояние  между представлениями ниже этого порога будет означать, что сравниваемые лица одни и те же 
+THRESHOLD_EUC = 0.5 # По видео понятно, что нужно больше; ещё влияет размер лиц
+# 13 лиц вместо 7 при 0,99
+# 35 лиц вместо 7 при 0,5, 45px
 
 
 def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, device:str = 'cpu', debug = False):
@@ -26,7 +30,7 @@ def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, devi
     for i,box in enumerate( face_boxes ):		# итерируемся по лицам
         x1,y1,x2,y2 = box
         face_img = img[y1:y2, x1:x2, :]
-        if (x2-x1 >= MIN_SIZE) and (y2 - y1 >= MIN_SIZE):
+        if (x2-x1 >= MIN_FACE_SIZE) and (y2 - y1 >= MIN_FACE_SIZE):
 
 	        face_img1 = mtcnn(face_img)        
 
@@ -40,6 +44,7 @@ def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, devi
 		        	draw.rectangle( box, outline = (255, 0, 255))
 			        im.save(f"{x1}-{x2}, {y1}-{y2} face.jpeg")
     return face_embs
+    # можно попробовать ускорить функцию обрабатывая лица в параллельных процессах, см. https://pytorch.org/docs/stable/notes/multiprocessing.html
 
 
 
@@ -58,6 +63,8 @@ def init_models(device:str = 'cpu'):
 # первое приближение для порога различий получено их тестовых картинок
 def filter_new_faces(faces:list, known_faces:list, threshold = THRESHOLD_EUC):
 	"""выдаёт те представления лиц из faces, что не похожи на known_faces"""
+	if not faces: return []
+
 	start = 0
 	if len(known_faces) == 0:
 		known_faces += [faces[0]]

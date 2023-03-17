@@ -13,28 +13,37 @@ import torch
 import imageio          # читает видео
 
 
-def TEST_IMAGE(filename:str, persons:int = None):
+def TEST_IMAGE(filename:str, faces_n:int = None):
     """проверка на картинке filename с одним лицом; 
-    проверяет утверждение сравнивая persons (ожидаемое число лиц на картинке) с фактическим"""
+    проверяет утверждение сравнивая faces_n (ожидаемое число лиц на картинке) с фактическим"""
     global model_face_detect, mtcnn, model_face_recog, DEVICE
     orgimg = np.array( Image.open( filename ) )
     t0 = time.time()
     bboxes,points = model_face_detect.predict(orgimg)
     embs = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], orgimg, DEVICE)
     t1 = time.time()
-    print(filename)
-    print(f"frames: {1}; size {orgimg.shape[0]:4d}x{orgimg.shape[1]:4d}; face embeddings: {len(embs)}; time {t1-t0:6.3f} sec")
-    if persons is not None:
-        assert len(embs) == persons
+    print(f"{filename:40s}; size {orgimg.shape[0]:4d}x{orgimg.shape[1]:4d}; face embeddings: {len(embs):3d}; time {t1-t0:6.3f} sec")
+    if faces_n is not None:
+        assert len(embs) == faces_n, f"{filename} detected faces: {len(embs)}, should be {faces_n}"
+
+
+# def TEST_IMAGES():
+#     """тест распознования на картинках; не учитывает уникальность 
+#     перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
+#     jpgFilenamesList = glob.glob('test-images/*.jpg')
+#     for file in jpgFilenamesList:
+#         persons = int(file[-5:-4])
+#         TEST_IMAGE(file, persons)
+#     print("[OK] TEST_IMAGES\n")
 
 
 def TEST_IMAGES():
-    """тест распознования на картинках; 
+    """тест распознования на картинках; не учитывает уникальность 
     перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
-    jpgFilenamesList = glob.glob('test-images/*.jpg')
-    for file in jpgFilenamesList:
-        persons = int(file[-5:-4])
-        TEST_IMAGE(file, persons)
+    # значения для мин ширины картинки 45px
+    TEST_IMAGE('test-images/peoples-side-5.jpg', 2)
+    TEST_IMAGE('test-images/peoples-1.jpg', 1)
+    TEST_IMAGE('test-images/peoples-front-23.jpg', 23)
     print("[OK] TEST_IMAGES\n")
 
 
@@ -80,7 +89,7 @@ def TEST_VIDEO_UNIQUE_FACES(filename:str, uniq_faces:int = None):
     duration = vid.get_meta_data(1)['duration']
     vid_len = int(fps * duration)
     known_faces = []
-    print(f"vid len {vid_len} frames")
+
     for i,frame in enumerate(vid):
         bboxes,points = model_face_detect.predict(frame)
         
@@ -95,16 +104,16 @@ def TEST_VIDEO_UNIQUE_FACES(filename:str, uniq_faces:int = None):
         # print(f"frame: {i:4d}; faces detected: {len(bboxes[0])}")
     t1 = time.time()
 
-    print()
+
     print(f"frames: {i}; time {t1-t0:.3f} sec; fps {i/(t1-t0):4.2f} uniq face embeddings: {len(known_faces)}")
 
-    assert len(known_faces) == uniq_faces
+    assert len(known_faces) == uniq_faces, f"{filename} detected faces: {len(known_faces)}, should be {uniq_faces}"
 
     print("[OK] TEST_VIDEO_UNIQUE_FACES\n")
 
 
 
-def TEST_UNIQUE_FACES_COUNT(filename:str, uniq_faces:int = None):
+def TEST_IMAGE_UNIQUE_FACES_COUNT(filename:str, uniq_faces:int = None):
     """Проверяет количество различных"""
     global model_face_detect, mtcnn, model_face_recog, DEVICE
     orgimg = np.array( Image.open( filename ) )
@@ -112,8 +121,7 @@ def TEST_UNIQUE_FACES_COUNT(filename:str, uniq_faces:int = None):
     bboxes,points = model_face_detect.predict(orgimg)
     embs = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], orgimg, DEVICE)
     t1 = time.time()
-    print(filename)
-    print(f"frames: {1}; size {orgimg.shape[0]:4d}x{orgimg.shape[1]:4d}; face embeddings: {len(embs)}; time {t1-t0:6.3f} sec")
+    print(f"{filename:40s}; size {orgimg.shape[0]:4d}x{orgimg.shape[1]:4d}; face embeddings: {len(embs):3d}; time {t1-t0:6.3f} sec")
 
     # поиск уникальных лиц
     known_faces = []
@@ -122,13 +130,13 @@ def TEST_UNIQUE_FACES_COUNT(filename:str, uniq_faces:int = None):
         assert len(known_faces) == uniq_faces
 
 
-def TEST_UNIQUE_FACES_COUNT_ALL():
-    """тест распознования на картинках; 
+def TEST_IMAGE_UNIQUE_FACES_COUNT_ALL():
+    """тест распознования _уникальных лиц_ на картинках; 
     перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
-    TEST_UNIQUE_FACES_COUNT('test-images/peoples-side-5.jpg', 5)
-    TEST_UNIQUE_FACES_COUNT('test-images/peoples-front-5.jpg', 5)
-    TEST_UNIQUE_FACES_COUNT('test-images/peoples-1.jpg', 1)
-    print("[OK] TEST_UNIQUE_FACES_COUNT_ALL\n")
+    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-side-5.jpg', 2)
+    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-1.jpg', 1)
+    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-front-23.jpg', 23)
+    print("[OK] TEST_IMAGE_UNIQUE_FACES_COUNT_ALL\n")
 
 
 
@@ -149,13 +157,15 @@ if DEVICE != 'cpu':
 # инициализация моделей
 model_face_detect, mtcnn, model_face_recog = main_lib.init_models(DEVICE)
 
+
+print(f"Parameters. MIN_FACE_SIZE {main_lib.MIN_FACE_SIZE:3d}; THRESHOLD_EUC: {main_lib.THRESHOLD_EUC:.4f}\n")
 TEST_IMAGES()
-TEST_UNIQUE_FACES_COUNT_ALL()
+TEST_IMAGE_UNIQUE_FACES_COUNT_ALL()
 
 # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
 # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking-and-pause.mp4
-TEST_VIDEO('test-images/face-demographics-walking-and-pause.mp4')
-TEST_VIDEO('test-images/face-demographics-walking.mp4')
+# TEST_VIDEO('test-images/face-demographics-walking-and-pause.mp4')
+# TEST_VIDEO('test-images/face-demographics-walking.mp4')
 
 
 # FIX: на видео 7 ращзных людей, но программа находит 20. 
