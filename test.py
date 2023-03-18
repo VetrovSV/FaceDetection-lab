@@ -44,7 +44,57 @@ def TEST_IMAGES():
     TEST_IMAGE('test-images/peoples-side-5.jpg', 2)
     TEST_IMAGE('test-images/peoples-1.jpg', 1)
     TEST_IMAGE('test-images/peoples-front-23.jpg', 23)
+    TEST_IMAGE('test-images/peoples-11.jpg', 11)
     print("[OK] TEST_IMAGES\n")
+
+
+
+def TEST_IMAGE_UNIQUE_FACES_COUNT(filename:str, uniq_faces:int = None):
+    """Проверяет количество различных"""
+    global model_face_detect, mtcnn, model_face_recog, DEVICE
+    orgimg = np.array( Image.open( filename ) )
+    t0 = time.time()
+    bboxes,points = model_face_detect.predict(orgimg)
+    embs = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], orgimg, DEVICE)
+    t1 = time.time()
+    print(f"{filename:40s}; size {orgimg.shape[0]:4d}x{orgimg.shape[1]:4d}; face embeddings: {len(embs):3d}; time {t1-t0:6.3f} sec")
+
+    # поиск уникальных лиц
+    known_faces = []
+    known_faces = main_lib.filter_new_faces(embs, known_faces)
+    if uniq_faces is not None:
+        assert len(known_faces) == uniq_faces
+
+
+def TEST_IMAGE_UNIQUE_FACES_COUNT_ALL():
+    """тест распознования _уникальных лиц_ на картинках; 
+    перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
+    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-side-5.jpg', 2)
+    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-1.jpg', 1)
+    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-front-23.jpg', 23)
+    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-11.jpg', 11)
+    print("[OK] TEST_IMAGE_UNIQUE_FACES_COUNT_ALL\n")
+
+
+def TEST_DIST_MITRIX(filename: str):
+    """"Проверяет матрицу расстояний между векторными представлниями людей"""
+    global model_face_detect, mtcnn, model_face_recog, DEVICE
+    orgimg = np.array( Image.open( filename ) )
+    t0 = time.time()
+    bboxes,points = model_face_detect.predict(orgimg)
+    embs = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], orgimg, DEVICE)
+    t1 = time.time()
+    matrix = main_lib.calc_distances_matrix(embs)
+
+    print(matrix)
+
+    # выбор всех кто не NaN
+    assert matrix[~matrix.isnan()].min() > main_lib.THRESHOLD_EUC, f"Faces {filename:40s} not different"
+
+    print("[OK] TEST_DIST_MITRIX")
+
+
+
 
 
 def TEST_VIDEO(filename:str):
@@ -60,6 +110,7 @@ def TEST_VIDEO(filename:str):
 
     print(f"vid len {vid_len} frames")
     for i,frame in enumerate(vid):
+        # TODO: перенести кадр сразу на видеокарту
         bboxes,points = model_face_detect.predict(frame)
         
         # если найдены лица
@@ -113,34 +164,6 @@ def TEST_VIDEO_UNIQUE_FACES(filename:str, uniq_faces:int = None):
 
 
 
-def TEST_IMAGE_UNIQUE_FACES_COUNT(filename:str, uniq_faces:int = None):
-    """Проверяет количество различных"""
-    global model_face_detect, mtcnn, model_face_recog, DEVICE
-    orgimg = np.array( Image.open( filename ) )
-    t0 = time.time()
-    bboxes,points = model_face_detect.predict(orgimg)
-    embs = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], orgimg, DEVICE)
-    t1 = time.time()
-    print(f"{filename:40s}; size {orgimg.shape[0]:4d}x{orgimg.shape[1]:4d}; face embeddings: {len(embs):3d}; time {t1-t0:6.3f} sec")
-
-    # поиск уникальных лиц
-    known_faces = []
-    known_faces = main_lib.filter_new_faces(embs, known_faces)
-    if uniq_faces is not None:
-        assert len(known_faces) == uniq_faces
-
-
-def TEST_IMAGE_UNIQUE_FACES_COUNT_ALL():
-    """тест распознования _уникальных лиц_ на картинках; 
-    перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
-    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-side-5.jpg', 2)
-    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-1.jpg', 1)
-    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-front-23.jpg', 23)
-    print("[OK] TEST_IMAGE_UNIQUE_FACES_COUNT_ALL\n")
-
-
-
-
 # DEVICE = 'cuda:0'
 DEVICE = 'cpu'
 print(f"Device: {DEVICE}")
@@ -159,9 +182,11 @@ model_face_detect, mtcnn, model_face_recog = main_lib.init_models(DEVICE)
 
 
 print(f"Parameters. MIN_FACE_SIZE {main_lib.MIN_FACE_SIZE:3d}; THRESHOLD_EUC: {main_lib.THRESHOLD_EUC:.4f}\n")
-TEST_IMAGES()
-TEST_IMAGE_UNIQUE_FACES_COUNT_ALL()
+# TEST_IMAGES()
+# TEST_IMAGE_UNIQUE_FACES_COUNT_ALL()
 
+
+TEST_DIST_MITRIX('test-images/peoples-side-5.jpg')
 # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
 # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking-and-pause.mp4
 # TEST_VIDEO('test-images/face-demographics-walking-and-pause.mp4')
