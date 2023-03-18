@@ -115,14 +115,15 @@ img -- картинка с несколькими лицами
 	dubs_embs = []		# представления
 	dubs_fimgs = []		# изображения
 
-	start = 1
 
-	# поиск похожих лиц
-	for face, img in zip( embs[start:], fimgs[start:]):
-		dists = calc_distances(face, embs)
-		if torch.min( dists ) < threshold:			# лицо не похоже на остальные
-			dubs_embs += [ face ]
-			dubs_fimgs += [ img ]
+	dmatr = calc_distances_matrix(embs)
+
+	# todo: переписать с использованием функций торча
+	for i in range(len(dmatr)):		# перебор номеров представлений лиц
+		if (dmatr[:, i] < threshold).any():	# если любой элемент в i-м столбце меньше  threshold
+			dubs_embs += [ embs[i] ]
+			dubs_fimgs += [ fimgs[i] ]
+	
 	return dubs_embs, dubs_fimgs
 
 
@@ -136,7 +137,7 @@ def calc_distances(face:torch.Tensor, faces:list[torch.Tensor]):
 	return distances
 
 
-def calc_distances_matrix(faces:list):
+def calc_distances_matrix(faces:list[torch.tensor]):
 	"""Строит верхнюю треуголььную матрицу расстояний всех лицевых представлений до всех лицевых представлений"""
 	n = len(faces)
 	dmat = torch.zeros( (n,n) ).fill_(torch.nan)		# nan чтобы потом удобнее было отбирать значения

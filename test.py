@@ -99,7 +99,7 @@ def TEST_DIST_MITRIX(filename: str, check = lambda my_min: my_min >= main_lib.TH
 
 
 
-def TEST_VIDEO(filename:str):
+def TEST_SIMPLE_VIDEO(filename:str):
     """прогоняет видео, распознаёт лица, не проверяет утверждения"""
     vid = imageio.get_reader(filename,  'ffmpeg')
     print(f"file: {filename};  size: {vid.get_meta_data(1)['size']}; duration {vid.get_meta_data(1)['duration']}; fps {vid.get_meta_data(1)['fps']}")
@@ -129,7 +129,7 @@ def TEST_VIDEO(filename:str):
     print()
     print(f"frames: {i}; time {t1-t0:.3f} sec; fps {i/(t1-t0):4.2f} face embeddings: {len(Faces)}")
 
-    print("[OK] TEST_VIDEO\n")
+    print("[OK] TEST_SIMPLE_VIDEO\n")
 
 
 def TEST_VIDEO_UNIQUE_FACES(filename:str, uniq_faces:int = None):
@@ -157,6 +157,8 @@ def TEST_VIDEO_UNIQUE_FACES(filename:str, uniq_faces:int = None):
         # print(f"frame: {i:4d}; faces detected: {len(bboxes[0])}")
     t1 = time.time()
 
+    # для отладки
+    print(main_lib.calc_distances_matrix(known_faces))
 
     print(f"frames: {i}; time {t1-t0:.3f} sec; fps {i/(t1-t0):4.2f} uniq face embeddings: {len(known_faces)}")
 
@@ -206,14 +208,18 @@ TEST_DIST_MITRIX('test-images/peoples-front-23_2.jpg', check = lambda min: min <
 TEST_DIST_MITRIX('test-images/peoples-11.jpg')
 print("[OK] TEST_DIST_MITRIX")
 
-# вычленение похожих
+
+# простая проверка на вычленение похожих
 dubs_embs, dubs_fimgs = main_lib.get_dubs_faces(model_face_detect, mtcnn, model_face_recog, 
-    picture = np.array( Image.open( 'test-images/peoples-front-23_2.jpg' ) ))
+                        picture = np.array( Image.open( 'test-images/peoples-front-23_2.jpg' ) ))
+print( len(dubs_embs))
+assert len(dubs_embs) == 2
+print("[OK] TEST_SIMPLE_GET_DUBS_FACES")
 
 # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
 # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking-and-pause.mp4
-# TEST_VIDEO('test-images/face-demographics-walking-and-pause.mp4')
-# TEST_VIDEO('test-images/face-demographics-walking.mp4')
+TEST_SIMPLE_VIDEO('test-images/face-demographics-walking-and-pause.mp4')
+TEST_SIMPLE_VIDEO('test-images/face-demographics-walking.mp4')
 
 
 # FIX: на видео 7 ращзных людей, но программа находит 20. 
