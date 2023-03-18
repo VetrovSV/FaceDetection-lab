@@ -6,11 +6,15 @@ import time
 import numpy as np
 import glob    # для перебора файлов в папке
 from PIL import Image
-import main_lib			# тут пара функций для удобной инициализации и детекции
 
 import torch
 
 import imageio          # читает видео
+# для сохранения тензоров в картинки
+
+import main_lib			# тут пара функций для удобной инициализации и детекции
+import util             # служебные функции для работы с лицами и т.
+
 
 
 def TEST_IMAGE(filename:str, faces_n:int = None):
@@ -43,7 +47,7 @@ def TEST_IMAGES():
     # значения для мин ширины картинки 45px
     TEST_IMAGE('test-images/peoples-side-5.jpg', 2)
     TEST_IMAGE('test-images/peoples-1.jpg', 1)
-    TEST_IMAGE('test-images/peoples-front-23.jpg', 23)
+    TEST_IMAGE('test-images/peoples-front-23_2.jpg', 23+2)      # + 2 повтора другой фотографии того же человека
     TEST_IMAGE('test-images/peoples-11.jpg', 11)
     print("[OK] TEST_IMAGES\n")
 
@@ -63,7 +67,7 @@ def TEST_IMAGE_UNIQUE_FACES_COUNT(filename:str, uniq_faces:int = None):
     known_faces = []
     known_faces = main_lib.filter_new_faces(embs, known_faces)
     if uniq_faces is not None:
-        assert len(known_faces) == uniq_faces
+        assert len(known_faces) == uniq_faces, f"{filename} detected faces: {len(known_faces)}, should be {uniq_faces}"
 
 
 def TEST_IMAGE_UNIQUE_FACES_COUNT_ALL():
@@ -71,28 +75,26 @@ def TEST_IMAGE_UNIQUE_FACES_COUNT_ALL():
     перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
     TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-side-5.jpg', 2)
     TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-1.jpg', 1)
-    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-front-23.jpg', 23)
+    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-front-23_2.jpg', 23)         # тут есть три повтора, они не с счёт
     TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-11.jpg', 11)
     print("[OK] TEST_IMAGE_UNIQUE_FACES_COUNT_ALL\n")
 
 
-def TEST_DIST_MITRIX(filename: str):
+def TEST_DIST_MITRIX(filename: str, check = lambda my_min: my_min >= main_lib.THRESHOLD_EUC ):
     """"Проверяет матрицу расстояний между векторными представлниями людей"""
     global model_face_detect, mtcnn, model_face_recog, DEVICE
     orgimg = np.array( Image.open( filename ) )
-    t0 = time.time()
+
     bboxes,points = model_face_detect.predict(orgimg)
     embs = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], orgimg, DEVICE)
-    t1 = time.time()
-    matrix = main_lib.calc_distances_matrix(embs)
+    matrix = main_lib.calc_distances_matrix(embs)       # матрица расстояний представлений всех лиц от каждого до каждого
 
-    print(matrix)
+    # print(matrix) # для отладки
 
-    # выбор всех кто не NaN
-    assert matrix[~matrix.isnan()].min() > main_lib.THRESHOLD_EUC, f"Faces {filename:40s} not different"
+    # выбор всех кто не NaN, на всех картинках лица разные, поэтому каждая разность долюна быть больше пороговой
+    min = matrix[~matrix.isnan()].min()     # минимальные различия между лицами
 
-    print("[OK] TEST_DIST_MITRIX")
-
+    assert check(min) , f"Faces {filename:40s} not different"
 
 
 
@@ -182,11 +184,32 @@ model_face_detect, mtcnn, model_face_recog = main_lib.init_models(DEVICE)
 
 
 print(f"Parameters. MIN_FACE_SIZE {main_lib.MIN_FACE_SIZE:3d}; THRESHOLD_EUC: {main_lib.THRESHOLD_EUC:.4f}\n")
-# TEST_IMAGES()
-# TEST_IMAGE_UNIQUE_FACES_COUNT_ALL()
 
+# простая проверка распознования людей на картинках, без учёта их уникальности
+TEST_IMAGES()
+# простая проверка распознования людей на картинках, с учётом уникальности
+TEST_IMAGE_UNIQUE_FACES_COUNT_ALL()
 
+# проверка построения матриц расстояний. расстояия между лицами разных людей должны быть не ниже порогового THRESHOLD_EUC
 TEST_DIST_MITRIX('test-images/peoples-side-5.jpg')
+TEST_DIST_MITRIX('test-images/peoples-front-23_2.jpg', check = lambda min: min < 0.5)        # тут есть одни и те же люди
+
+# для отладки
+# orgimg = np.array( Image.open( 'test-images/peoples-11.jpg' ) )
+# bboxes,points = model_face_detect.predict(orgimg)
+# embs, imgs = main_lib.recognise_faces_img(mtcnn, model_face_recog, bboxes[0], orgimg, DEVICE)
+# matrix = main_lib.calc_distances_matrix(embs)       # матрица расстояний представлений всех лиц от каждого до каждого
+# print(matrix) # для отладки
+# util.save_faces(imgs)
+
+
+TEST_DIST_MITRIX('test-images/peoples-11.jpg')
+print("[OK] TEST_DIST_MITRIX")
+
+# вычленение похожих
+dubs_embs, dubs_fimgs = main_lib.get_dubs_faces(model_face_detect, mtcnn, model_face_recog, 
+    picture = np.array( Image.open( 'test-images/peoples-front-23_2.jpg' ) ))
+
 # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
 # wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking-and-pause.mp4
 # TEST_VIDEO('test-images/face-demographics-walking-and-pause.mp4')
@@ -198,3 +221,6 @@ TEST_DIST_MITRIX('test-images/peoples-side-5.jpg')
 # Фильтровать плохие детекции? 
 # Слегка изменять представления знакомых лиц при их повторной стрече?
 TEST_VIDEO_UNIQUE_FACES('test-images/face-demographics-walking-and-pause.mp4', 7)           # FAIL
+
+
+# TODO: set no grad for tensors

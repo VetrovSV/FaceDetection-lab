@@ -21,11 +21,13 @@ MIN_FACE_SIZE = 45
 THRESHOLD_EUC = 0.5 # По видео понятно, что нужно больше; ещё влияет размер лиц
 # 13 лиц вместо 7 при 0.99
 # 35 лиц вместо 7 при 0.5, 45px
+# если больше 0.55, то путает азиатов на картинке с 11 людьми
 
 
 def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, device:str = 'cpu', debug = False):
     """распознаёт лица людей на RGB картинке img в прямоугольниках face_boxes;
-    если debug = True, то будет сохрянять плохик картинки"""
+    если debug = True, то будет сохрянять плохик картинки
+    Возвращает представления лиц"""
     face_embs = []
     for i,box in enumerate( face_boxes ):		# итерируемся по лицам
         x1,y1,x2,y2 = box
@@ -46,6 +48,31 @@ def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, devi
     return face_embs
     # можно попробовать ускорить функцию обрабатывая лица в параллельных процессах, см. https://pytorch.org/docs/stable/notes/multiprocessing.html
 
+
+def recognise_faces_img(mtcnn, model_face_recog, face_boxes:list, img:np.array, device:str = 'cpu', debug = False):
+    """распознаёт лица людей на RGB картинке img в прямоугольниках face_boxes; 
+    если debug = True, то будет сохрянять плохик картинки
+    Возвращает представления и изображения лиц"""
+    face_embs = []	# список представлений лиц
+    face_imgs = []  # список изображений лиц
+    for i,box in enumerate( face_boxes ):		# итерируемся по лицам
+        x1,y1,x2,y2 = box
+        face_img = img[y1:y2, x1:x2, :]
+        if (x2-x1 >= MIN_FACE_SIZE) and (y2 - y1 >= MIN_FACE_SIZE):
+
+	        face_img1 = mtcnn(face_img)        
+
+	        if face_img1 is not None:		# в прямоугольнике нет лица
+	            face_emb = model_face_recog( face_img1.to(device).unsqueeze(0) )
+	            face_embs += [ face_emb ]
+	            face_imgs += [face_img1 ]
+	        else: 
+	        	if debug:			# если пошло что-то не так, то сохраним картинку с плохими лицами
+		        	im = Image.fromarray(img)
+		        	draw = ImageDraw.Draw(im)
+		        	draw.rectangle( box, outline = (255, 0, 255))
+			        im.save(f"{x1}-{x2}, {y1}-{y2} face.jpeg")
+    return face_embs, face_imgs
 
 
 def init_models(device:str = 'cpu'):
@@ -77,6 +104,29 @@ def filter_new_faces(faces:list, known_faces:list, threshold = THRESHOLD_EUC):
 	return known_faces
 
 
+# служебная функция
+def get_dubs_faces(model_face_detect, mtcnn, model_face_recog, picture, threshold = THRESHOLD_EUC, device = 'cpu'):
+	"""
+img -- картинка с несколькими лицами
+выдаёт список представлений дубликатов и картинки"""
+	bboxes,points = model_face_detect.predict(picture)
+	embs, fimgs = recognise_faces_img(mtcnn, model_face_recog, bboxes[0], picture, device)
+
+	dubs_embs = []		# представления
+	dubs_fimgs = []		# изображения
+
+	start = 1
+
+	# поиск похожих лиц
+	for face, img in zip( embs[start:], fimgs[start:]):
+		dists = calc_distances(face, embs)
+		if torch.min( dists ) < threshold:			# лицо не похоже на остальные
+			dubs_embs += [ face ]
+			dubs_fimgs += [ img ]
+	return dubs_embs, dubs_fimgs
+
+
+
 def calc_distances(face:torch.Tensor, faces:list[torch.Tensor]):
 	"""возвращает расстояние от представления лица face до всех остальных """
 	distances = torch.zeros( len(faces) )
@@ -87,7 +137,7 @@ def calc_distances(face:torch.Tensor, faces:list[torch.Tensor]):
 
 
 def calc_distances_matrix(faces:list):
-	"""Строит верхнюю треуголььную матрицу расстояний всех представлений до всех представлений"""
+	"""Строит верхнюю треуголььную матрицу расстояний всех лицевых представлений до всех лицевых представлений"""
 	n = len(faces)
 	dmat = torch.zeros( (n,n) ).fill_(torch.nan)		# nan чтобы потом удобнее было отбирать значения
 	for i in range(n):
@@ -97,26 +147,3 @@ def calc_distances_matrix(faces:list):
 
 
 
-def recognise_faces_img(mtcnn, model_face_recog, face_boxes:list, img:np.array, device:str = 'cpu', debug = False):
-    """распознаёт лица людей на RGB картинке img в прямоугольниках face_boxes; выдаёт ещё картинки лиц
-    если debug = True, то будет сохрянять плохик картинки"""
-    face_embs = []	# список представлений лиц
-    face_imgs = []  # список изображений лиц
-    for i,box in enumerate( face_boxes ):		# итерируемся по лицам
-        x1,y1,x2,y2 = box
-        face_img = img[y1:y2, x1:x2, :]
-        if (x2-x1 >= MIN_FACE_SIZE) and (y2 - y1 >= MIN_FACE_SIZE):
-
-	        face_img1 = mtcnn(face_img)        
-
-	        if face_img1 is not None:		# в прямоугольнике нет лица
-	            face_emb = model_face_recog( face_img1.to(device).unsqueeze(0) )
-	            face_embs += [ face_emb ]
-	            face_imgs += [face_img1 ]
-	        else: 
-	        	if debug:			# если пошло что-то не так, то сохраним картинку с плохими лицами
-		        	im = Image.fromarray(img)
-		        	draw = ImageDraw.Draw(im)
-		        	draw.rectangle( box, outline = (255, 0, 255))
-			        im.save(f"{x1}-{x2}, {y1}-{y2} face.jpeg")
-    return face_embs, face_imgs
