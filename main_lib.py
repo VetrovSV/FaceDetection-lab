@@ -35,7 +35,7 @@ def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, devi
 	        face_img1 = mtcnn(face_img)        
 
 	        if face_img1 is not None:		# в прямоугольнике нет лица
-	            face_emb = model_face_recog( face_img1.unsqueeze(0).to(device) )
+	            face_emb = model_face_recog( face_img1.to(device).unsqueeze(0) )
 	            face_embs += [ face_emb ]
 	        else: 
 	        	if debug:			# если пошло что-то не так, то сохраним картинку с плохими лицами
@@ -46,6 +46,30 @@ def recognise_faces(mtcnn, model_face_recog, face_boxes:list, img:np.array, devi
     return face_embs
     # можно попробовать ускорить функцию обрабатывая лица в параллельных процессах, см. https://pytorch.org/docs/stable/notes/multiprocessing.html
 
+
+def recognise_faces_img(mtcnn, model_face_recog, face_boxes:list, img:np.array, device:str = 'cpu', debug = False):
+    """распознаёт лица людей на RGB картинке img в прямоугольниках face_boxes; выдаёт ещё картинки лиц
+    если debug = True, то будет сохрянять плохик картинки"""
+    face_embs = []	# список представлений лиц
+    face_imgs = []  # список изображений лиц
+    for i,box in enumerate( face_boxes ):		# итерируемся по лицам
+        x1,y1,x2,y2 = box
+        face_img = img[y1:y2, x1:x2, :]
+        if (x2-x1 >= MIN_FACE_SIZE) and (y2 - y1 >= MIN_FACE_SIZE):
+
+	        face_img1 = mtcnn(face_img)        
+
+	        if face_img1 is not None:		# в прямоугольнике нет лица
+	            face_emb = model_face_recog( face_img1.to(device).unsqueeze(0) )
+	            face_embs += [ face_emb ]
+	            face_imgs += [face_img1 ]
+	        else: 
+	        	if debug:			# если пошло что-то не так, то сохраним картинку с плохими лицами
+		        	im = Image.fromarray(img)
+		        	draw = ImageDraw.Draw(im)
+		        	draw.rectangle( box, outline = (255, 0, 255))
+			        im.save(f"{x1}-{x2}, {y1}-{y2} face.jpeg")
+    return face_embs
 
 
 def init_models(device:str = 'cpu'):

@@ -38,6 +38,9 @@ yoloface/utils/general.py строка 93
 
 
 Видео для теста:
+https://github.com/intel-iot-devkit/sample-videos
 ```bash
+cd test-images
 wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking.mp4
+wget https://raw.githubusercontent.com/intel-iot-devkit/sample-videos/master/face-demographics-walking-and-pause.mp4
 ```

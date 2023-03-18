@@ -44,6 +44,7 @@ def TEST_IMAGES():
     TEST_IMAGE('test-images/peoples-side-5.jpg', 2)
     TEST_IMAGE('test-images/peoples-1.jpg', 1)
     TEST_IMAGE('test-images/peoples-front-23.jpg', 23)
+    TEST_IMAGE('test-images/peoples-11.jpg', 11)
     print("[OK] TEST_IMAGES\n")
 
 
@@ -60,6 +61,7 @@ def TEST_VIDEO(filename:str):
 
     print(f"vid len {vid_len} frames")
     for i,frame in enumerate(vid):
+        # TODO: перенести кадр сразу на видеокарту
         bboxes,points = model_face_detect.predict(frame)
         
         # если найдены лица
@@ -136,6 +138,7 @@ def TEST_IMAGE_UNIQUE_FACES_COUNT_ALL():
     TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-side-5.jpg', 2)
     TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-1.jpg', 1)
     TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-front-23.jpg', 23)
+    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-11.jpg', 11)
     print("[OK] TEST_IMAGE_UNIQUE_FACES_COUNT_ALL\n")
 
 
