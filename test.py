@@ -18,7 +18,7 @@ import util             # служебные функции для работы 
 
 
 def TEST_IMAGE(filename:str, faces_n:int = None):
-    """проверка на картинке filename с одним лицом; 
+    """Проверка на картинке filename с одним лицом;
     проверяет утверждение сравнивая faces_n (ожидаемое число лиц на картинке) с фактическим"""
     global model_face_detect, mtcnn, model_face_recog, DEVICE
     orgimg = np.array( Image.open( filename ) )
@@ -32,8 +32,8 @@ def TEST_IMAGE(filename:str, faces_n:int = None):
 
 
 # def TEST_IMAGES():
-#     """тест распознования на картинках; не учитывает уникальность 
-#     перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
+#     """тест распознавания на картинках; не учитывает уникальность
+#     перед расширением в имени картинки должно быть указано число человек. Например: peoples-5.jpg"""
 #     jpgFilenamesList = glob.glob('test-images/*.jpg')
 #     for file in jpgFilenamesList:
 #         persons = int(file[-5:-4])
@@ -42,8 +42,8 @@ def TEST_IMAGE(filename:str, faces_n:int = None):
 
 
 def TEST_IMAGES():
-    """тест распознования на картинках; не учитывает уникальность 
-    перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
+    """Тест распознования на картинках; не учитывает уникальность
+    перед расширением в имени картинки должно быть указано число человек. Например: peoples-5.jpg"""
     # значения для мин ширины картинки 45px
     TEST_IMAGE('test-images/peoples-side-5.jpg', 2)
     TEST_IMAGE('test-images/peoples-1.jpg', 1)
@@ -71,23 +71,23 @@ def TEST_IMAGE_UNIQUE_FACES_COUNT(filename:str, uniq_faces:int = None):
 
 
 def TEST_IMAGE_UNIQUE_FACES_COUNT_ALL():
-    """тест распознования _уникальных лиц_ на картинках; 
+    """Тест распознования _уникальных лиц_ на картинках;
     перед расширением в имене картинки должно быть указано число человек. Например: peoples-5.jpg"""
     TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-side-5.jpg', 2)
     TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-1.jpg', 1)
-    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-front-23_2.jpg', 23)         # тут есть три повтора, они не с счёт
+    TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-front-23_2.jpg', 23)       # тут есть три повтора, они не в счёт
     TEST_IMAGE_UNIQUE_FACES_COUNT('test-images/peoples-11.jpg', 11)
     print("[OK] TEST_IMAGE_UNIQUE_FACES_COUNT_ALL\n")
 
 
 def TEST_DIST_MITRIX(filename: str, check = lambda my_min: my_min >= main_lib.THRESHOLD_EUC ):
-    """"Проверяет матрицу расстояний между векторными представлниями людей"""
+    """"Проверяет матрицу расстояний между векторными представлениями людей"""
     global model_face_detect, mtcnn, model_face_recog, DEVICE
     orgimg = np.array( Image.open( filename ) )
 
     bboxes,points = model_face_detect.predict(orgimg)
     embs = main_lib.recognise_faces(mtcnn, model_face_recog, bboxes[0], orgimg, DEVICE)
-    matrix = main_lib.calc_distances_matrix(embs)       # матрица расстояний представлений всех лиц от каждого до каждого
+    matrix = main_lib.calc_distances_matrix(embs)      # матрица расстояний представлений всех лиц от каждого до каждого
 
     # print(matrix) # для отладки
 
@@ -100,7 +100,7 @@ def TEST_DIST_MITRIX(filename: str, check = lambda my_min: my_min >= main_lib.TH
 
 
 def TEST_SIMPLE_VIDEO(filename:str):
-    """прогоняет видео, распознаёт лица, не проверяет утверждения"""
+    """Прогоняет видео, распознаёт лица, не проверяет утверждения"""
     vid = imageio.get_reader(filename,  'ffmpeg')
     print(f"file: {filename};  size: {vid.get_meta_data(1)['size']}; duration {vid.get_meta_data(1)['duration']}; fps {vid.get_meta_data(1)['fps']}")
     Faces = []
@@ -110,7 +110,6 @@ def TEST_SIMPLE_VIDEO(filename:str):
     duration = vid.get_meta_data(1)['duration']
     vid_len = int(fps * duration)
 
-    print(f"vid len {vid_len} frames")
     for i,frame in enumerate(vid):
         # TODO: перенести кадр сразу на видеокарту
         bboxes,points = model_face_detect.predict(frame)
@@ -133,7 +132,7 @@ def TEST_SIMPLE_VIDEO(filename:str):
 
 
 def TEST_VIDEO_UNIQUE_FACES(filename:str, uniq_faces:int = None):
-    """прогоняет видео, распознаёт лица, не проверяет утверждения"""
+    """Прогоняет видео, считает уникальные лица, не проверяет утверждения"""
     vid = imageio.get_reader(filename,  'ffmpeg')
     print(f"file: {filename};  size: {vid.get_meta_data(1)['size']}; duration {vid.get_meta_data(1)['duration']}; fps {vid.get_meta_data(1)['fps']}")
 
@@ -153,7 +152,7 @@ def TEST_VIDEO_UNIQUE_FACES(filename:str, uniq_faces:int = None):
             if faces:       # если лица нашлись
                 known_faces = main_lib.filter_new_faces(faces, known_faces)
         # print(i)
-        if ( i % (vid_len//10) == 0): print("|",end="", flush=True)
+        if i % (vid_len//10) == 0: print("|", end="", flush=True)
         # print(f"frame: {i:4d}; faces detected: {len(bboxes[0])}")
     t1 = time.time()
 
@@ -187,14 +186,14 @@ model_face_detect, mtcnn, model_face_recog = main_lib.init_models(DEVICE)
 
 print(f"Parameters. MIN_FACE_SIZE {main_lib.MIN_FACE_SIZE:3d}; THRESHOLD_EUC: {main_lib.THRESHOLD_EUC:.4f}\n")
 
-# простая проверка распознования людей на картинках, без учёта их уникальности
+# простая проверка распознавания людей на картинках, без учёта их уникальности
 TEST_IMAGES()
-# простая проверка распознования людей на картинках, с учётом уникальности
+# простая проверка распознавания людей на картинках, с учётом уникальности
 TEST_IMAGE_UNIQUE_FACES_COUNT_ALL()
 
-# проверка построения матриц расстояний. расстояия между лицами разных людей должны быть не ниже порогового THRESHOLD_EUC
+# проверка построения матриц расстояний. Расстояния между лицами разных людей должны быть не ниже THRESHOLD_EUC
 TEST_DIST_MITRIX('test-images/peoples-side-5.jpg')
-TEST_DIST_MITRIX('test-images/peoples-front-23_2.jpg', check = lambda min: min < 0.5)        # тут есть одни и те же люди
+TEST_DIST_MITRIX('test-images/peoples-front-23_2.jpg', check = lambda min: min < 0.5)      # тут есть одни и те же люди
 
 # для отладки
 # orgimg = np.array( Image.open( 'test-images/peoples-11.jpg' ) )
@@ -206,7 +205,7 @@ TEST_DIST_MITRIX('test-images/peoples-front-23_2.jpg', check = lambda min: min <
 
 
 TEST_DIST_MITRIX('test-images/peoples-11.jpg')
-print("[OK] TEST_DIST_MITRIX")
+print("[OK] TEST_DIST_MATRIX")
 
 
 # простая проверка на вычленение похожих
@@ -222,10 +221,10 @@ TEST_SIMPLE_VIDEO('test-images/face-demographics-walking-and-pause.mp4')
 TEST_SIMPLE_VIDEO('test-images/face-demographics-walking.mp4')
 
 
-# FIX: на видео 7 ращзных людей, но программа находит 20. 
+# FIX: на видео 7 разных людей, но программа находит 20.
 # Отрегулировать порог? 
 # Фильтровать плохие детекции? 
-# Слегка изменять представления знакомых лиц при их повторной стрече?
+# Слегка изменять представления знакомых лиц при их повторной встрече?
 TEST_VIDEO_UNIQUE_FACES('test-images/face-demographics-walking-and-pause.mp4', 7)           # FAIL
 
 
